@@ -10,22 +10,47 @@ body.bg-dark {
   background-color: #121212;
   color: #fff;
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  padding-top: 50px; /* height of navbar to prevent overlap */
+  padding-top: 50px;   
+  padding-bottom: 60px; 
 }
 
-/* Navbar container */
-.navbar {
+/* Top Navbar */
+.top-navbar {
   position: fixed;
   top: 0;
   left: 0;
   width: 100%;
+  height: 50px;
   background-color: #121212;
   border-bottom: 1px solid #1db954;
   box-shadow: 0 2px 6px rgba(29, 185, 84, 0.5);
+  display: flex;
+  align-items: center;
+  padding: 0 1rem;
+  z-index: 1001;
+}
+
+.top-navbar-content .brand {
+  color: #1db954;
+  font-weight: 900;
+  font-size: 1.5rem;
+  user-select: none;
+  margin: 0;
+}
+
+/* Bottom Navbar */
+.bottom-navbar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  background-color: #121212;
+  border-top: 1px solid #1db954;
+  box-shadow: 0 -2px 6px rgba(29, 185, 84, 0.5);
   z-index: 1000;
 }
 
-/* Navbar list */
+/* Navbar list (for bottom navbar) */
 .nav-list {
   list-style: none;
   display: flex;
@@ -47,7 +72,7 @@ body.bg-dark {
   user-select: none;
 }
 
-/* Hover and focus states */
+/* Hover and focus states for nav links */
 .nav-link:hover,
 .nav-link:focus {
   background-color: #1db954;
