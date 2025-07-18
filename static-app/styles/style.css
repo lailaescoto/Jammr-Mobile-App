@@ -1,0 +1,87 @@
+/* Reset margins and box-sizing */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+/* Body background and font */
+body.bg-dark {
+  background-color: #121212;
+  color: #fff;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  padding-top: 50px; /* height of navbar to prevent overlap */
+}
+
+/* Navbar container */
+.navbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  background-color: #121212;
+  border-bottom: 1px solid #1db954;
+  box-shadow: 0 2px 6px rgba(29, 185, 84, 0.5);
+  z-index: 1000;
+}
+
+/* Navbar list */
+.nav-list {
+  list-style: none;
+  display: flex;
+  justify-content: center;
+  gap: 2rem;
+  padding: 0.75rem 0;
+  margin: 0;
+}
+
+/* Navbar links */
+.nav-link {
+  color: #bbb;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 1rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 6px;
+  transition: background-color 0.3s ease, color 0.3s ease;
+  user-select: none;
+}
+
+/* Hover and focus states */
+.nav-link:hover,
+.nav-link:focus {
+  background-color: #1db954;
+  color: #121212;
+  outline: none;
+}
+
+/* Active page link */
+.nav-link.active {
+  color: #1db954;
+  font-weight: 700;
+  border-bottom: 2px solid #1db954;
+}
+
+/* Main content container */
+.container {
+  max-width: 480px;
+  margin: 2rem auto;
+  padding: 0 1rem;
+  text-align: center;
+}
+
+/* Title styling */
+.title {
+  font-size: 3rem;
+  font-weight: 900;
+  margin-bottom: 0.3rem;
+  user-select: none;
+}
+
+/* Subtitle styling */
+.subtitle {
+  font-size: 1.3rem;
+  margin-bottom: 3rem;
+  color: #bbb;
+  user-select: none;
+}
