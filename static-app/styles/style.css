@@ -233,3 +233,24 @@ body.bg-dark {
   border-radius: 5px;
   cursor: pointer;
 }
+
+.library-item {
+  text-align: center;
+}
+
+.album-cover {
+  width: 40%;
+  border-radius: 10px;
+  margin-top: 10px;
+}
+
+.album-title {
+  font-weight: bold;
+  margin-top: 0.5rem;
+}
+
+.artist-name {
+  font-size: 0.9rem;
+  color: #ccc;
+  margin-bottom: 10px;
+}
