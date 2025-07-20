@@ -11,8 +11,34 @@
     </div>
   </nav>
 
-  <main class="container">
-    <!-- Search content goes here. -->
+  <main class="container search-page">
+    <h2><i class="fas fa-search"></i> Search Music</h2>
+
+    <div class="search-bar">
+      <input type="text" id="searchInput" placeholder="Search for songs, artists, or albums..." />
+      <button id="searchButton">Search</button>
+    </div>
+
+    <div id="searchResults" class="search-results">
+      <p>Start typing to find your jam...</p>
+
+      <li class="result-item">
+        <div class="result-info">
+          <h3>Heavy</h3>
+          <p>The Marias</p>
+          <p>CINEMA</p>
+        </div>
+        <button class="play-button">Play</button>
+      </li>
+      <li class="result-item">
+        <div class="result-info">
+          <h3>twilight zone</h3>
+          <p>Ariana Grande</p>
+          <p>eternal sunshine</p>
+        </div>
+        <button class="play-button">Play</button>
+      </li>
+    </div>
   </main>
 
   <nav class="bottom-navbar">
