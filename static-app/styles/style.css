@@ -110,3 +110,53 @@ body.bg-dark {
   color: #bbb;
   user-select: none;
 }
+
+
+.now-playing {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 2rem;
+}
+
+.album-art img {
+  width: 250px;
+  height: 250px;
+  border-radius: 10px;
+  margin-top: 150px;
+}
+
+.track-info {
+  text-align: center;
+}
+
+.song-title {
+  font-size: 1.5rem;
+  font-weight: bold;
+}
+
+.artist-name {
+  font-size: 1rem;
+  color: #aaa;
+}
+
+.controls .btn {
+  background: none;
+  border: none;
+  font-size: 2rem;
+  margin: 0 10px;
+  cursor: pointer;
+  color: white;
+}
+
+.progress {
+  display: flex;
+  align-items: center;
+  width: 80%;
+  gap: 10px;
+}
+
+.progress-bar {
+  flex: 1;
+}

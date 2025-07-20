@@ -11,8 +11,24 @@
     </div>
   </nav>
   
-  <main class="container">
-    <!-- Now Playing content goes here. -->
+  <main class="container now-playing">
+     <div class="album-art">
+    <img src="images/jupiter.jpg" alt="Album Art" />
+  </div>
+  <div class="track-info">
+    <h2 class="song-title">Jupiter</h2>
+    <p class="artist-name">The Marias</p>
+  </div>
+  <div class="controls">
+    <button class="btn prev">⏮️</button>
+    <button class="btn play">▶️</button>
+    <button class="btn next">⏭️</button>
+  </div>
+  <div class="progress">
+    <span class="time current">1:05</span>
+    <input type="range" min="0" max="100" value="30" class="progress-bar" />
+    <span class="time total">3:45</span>
+  </div>
   </main>
 
   <nav class="bottom-navbar">
