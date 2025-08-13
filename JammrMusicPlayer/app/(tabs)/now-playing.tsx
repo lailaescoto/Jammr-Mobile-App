@@ -171,11 +171,11 @@ export default function NowPlayingScreen() {
       {/* Favorites List */}
       <View style={styles.trackListContainer}>
         <Text style={styles.sectionTitle}>
-          ❤️ Favorites ({favorites.length})
+          Favorites ({favorites.length})
         </Text>
         {favorites.length === 0 ? (
           <Text style={styles.emptyFavoritesText}>
-            No favorites yet. Tap the ❤️ button to add songs!
+            No favorites yet. Tap the <Ionicons name="heart-outline" size={15} color="#999" /> button to add songs!
           </Text>
         ) : (
           favorites.map((track) => (
