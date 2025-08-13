@@ -10,12 +10,14 @@ export default function SearchScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [recentSearches, setRecentSearches] = useState<string[]>([]);
 
-  // Filter tracks based on search query
-  const filteredTracks = sampleTracks.filter(track => 
-    track.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    track.artist.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    track.album.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  // Filter tracks based on search query (shows all if empty)
+  const filteredTracks = searchQuery 
+    ? sampleTracks.filter(track => 
+        track.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        track.artist.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        track.album.toLowerCase().includes(searchQuery.toLowerCase())
+      )
+    : sampleTracks; // Show all tracks when no search query
 
   const handleSearch = () => {
     if (searchQuery.trim() && !recentSearches.includes(searchQuery)) {
@@ -53,56 +55,55 @@ export default function SearchScreen() {
         )}
       </View>
 
-      {/* Search Results */}
-      {searchQuery.length > 0 ? (
-        filteredTracks.length > 0 ? (
-          <FlatList
-            data={filteredTracks}
-            keyExtractor={(item) => item.id}
-            renderItem={({ item }) => (
-              <TouchableOpacity
-                style={styles.trackItem}
-                onPress={() => handlePlayTrack(item.id)}
-              >
-                <Image 
-                  source={{ uri: item.artwork }} 
-                  style={styles.trackImage}
-                />
-                <View style={styles.trackInfo}>
-                  <Text style={styles.trackTitle}>{item.title}</Text>
-                  <Text style={styles.trackSubtitle}>{item.artist} • {item.album}</Text>
-                </View>
-                <Ionicons name="play" size={24} color="#1DB954" />
-              </TouchableOpacity>
-            )}
-            contentContainerStyle={styles.resultsContainer}
-          />
-        ) : (
-          <View style={styles.emptyState}>
-            <Text style={styles.emptyText}>No results found for "{searchQuery}"</Text>
-          </View>
-        )
-      ) : (
-        <View style={styles.emptyState}>
-          <Ionicons name="search" size={64} color="#333" style={styles.searchEmptyIcon} />
-          <Text style={styles.emptyTitle}>Search Your Music</Text>
-          <Text style={styles.emptySubtitle}>Find songs, artists or albums</Text>
-          
-          {recentSearches.length > 0 && (
-            <>
-              <Text style={styles.recentTitle}>Recent Searches</Text>
-              {recentSearches.map((search, index) => (
-                <TouchableOpacity
-                  key={index}
-                  style={styles.recentItem}
-                  onPress={() => setSearchQuery(search)}
-                >
-                  <Ionicons name="time" size={16} color="#999" />
-                  <Text style={styles.recentText}>{search}</Text>
-                </TouchableOpacity>
-              ))}
-            </>
-          )}
+      {/* All Songs / Search Results */}
+      <FlatList
+        data={filteredTracks}
+        keyExtractor={(item) => item.id}
+        renderItem={({ item }) => (
+          <TouchableOpacity
+            style={styles.trackItem}
+            onPress={() => handlePlayTrack(item.id)}
+          >
+            <Image 
+              source={{ uri: item.artwork }} 
+              style={styles.trackImage}
+            />
+            <View style={styles.trackInfo}>
+              <Text style={styles.trackTitle}>{item.title}</Text>
+              <Text style={styles.trackSubtitle}>{item.artist} • {item.album}</Text>
+            </View>
+            <Ionicons name="play" size={24} color="#1DB954" />
+          </TouchableOpacity>
+        )}
+        contentContainerStyle={styles.resultsContainer}
+        ListHeaderComponent={
+          searchQuery.length === 0 && (
+            <Text style={styles.sectionTitle}>All Songs</Text>
+          )
+        }
+        ListEmptyComponent={
+          searchQuery.length > 0 && (
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyText}>No results found for "{searchQuery}"</Text>
+            </View>
+          )
+        }
+      />
+
+      {/* Recent Searches (only shown when no search query) */}
+      {searchQuery.length === 0 && recentSearches.length > 0 && (
+        <View style={styles.recentSearchesContainer}>
+          <Text style={styles.recentTitle}>Recent Searches</Text>
+          {recentSearches.map((search, index) => (
+            <TouchableOpacity
+              key={index}
+              style={styles.recentItem}
+              onPress={() => setSearchQuery(search)}
+            >
+              <Ionicons name="time" size={16} color="#999" />
+              <Text style={styles.recentText}>{search}</Text>
+            </TouchableOpacity>
+          ))}
         </View>
       )}
     </View>
@@ -133,8 +134,16 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 16,
   },
+  sectionTitle: {
+    color: 'white',
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginLeft: 16,
+    marginBottom: 16,
+  },
   resultsContainer: {
     paddingHorizontal: 16,
+    paddingBottom: 20,
   },
   trackItem: {
     flexDirection: 'row',
@@ -163,42 +172,27 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   emptyState: {
-    flex: 1,
+    padding: 20,
     alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 40,
-  },
-  searchEmptyIcon: {
-    marginBottom: 16,
-    opacity: 0.5,
-  },
-  emptyTitle: {
-    color: 'white',
-    fontSize: 20,
-    fontWeight: '600',
-    marginBottom: 8,
-  },
-  emptySubtitle: {
-    color: '#999',
-    fontSize: 16,
-    marginBottom: 32,
   },
   emptyText: {
     color: '#999',
     fontSize: 16,
   },
+  recentSearchesContainer: {
+    paddingHorizontal: 16,
+    paddingBottom: 20,
+  },
   recentTitle: {
     color: 'white',
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '600',
-    marginBottom: 16,
-    alignSelf: 'flex-start',
+    marginBottom: 12,
   },
   recentItem: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 12,
-    width: '100%',
     borderBottomWidth: 1,
     borderBottomColor: '#333',
   },
