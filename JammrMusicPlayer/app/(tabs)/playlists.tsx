@@ -1,35 +1,105 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import React from 'react';
-import { FlatList, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { FlatList, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View, TextInput, Alert } from 'react-native';
 import { sampleTracks } from '../../src/data/tracks';
-import { audioPlayer, Playlist } from '../../src/lib/player';
+import { audioPlayer } from '../../src/lib/player';
+import { playlistManager, Playlist } from '../../src/lib/playlists';
 
 export default function PlaylistsScreen() {
   const router = useRouter();
 
-  // Define two playlists with your 5 songs
-  const playlists: Playlist[] = [
-    {
-      id: '1',
-      name: 'Popular Mix',
-      coverImage: sampleTracks[0].artwork || '../../assets/images/playlist1.jpg',
-      tracks: [sampleTracks[0], sampleTracks[1], sampleTracks[2]] // First 3 tracks
-    },
-    {
-      id: '2',
-      name: 'Chill Vibes',
-      coverImage: sampleTracks[3].artwork || '../../assets/images/playlist2.jpg',
-      tracks: [sampleTracks[3], sampleTracks[4]] // Last 2 tracks
-    }
-  ];
-
+  const [playlists, setPlaylists] = React.useState<Playlist[]>([]);
   const [selectedPlaylist, setSelectedPlaylist] = React.useState<Playlist | null>(null);
+  const [showCreateModal, setShowCreateModal] = React.useState(false);
+  const [newPlaylistName, setNewPlaylistName] = React.useState('');
+
+  const refreshPlaylists = () => {
+    setPlaylists(playlistManager.getAllPlaylists());
+  };
+
+  React.useEffect(() => {
+    // Load playlists from the manager
+    refreshPlaylists();
+  }, []);
+
+  // Refresh playlists when screen comes into focus
+  useFocusEffect(
+    React.useCallback(() => {
+      refreshPlaylists();
+    }, [])
+  );
 
   const handlePlayTrack = async (track: typeof sampleTracks[0], playlist: Playlist) => {
     await audioPlayer.loadTrack(track, playlist);
     await audioPlayer.play();
     router.push('/(tabs)/now-playing');
+  };
+
+  const handleCreatePlaylist = () => {
+    if (newPlaylistName.trim()) {
+      const newPlaylist = playlistManager.createPlaylist(newPlaylistName.trim());
+      setPlaylists(playlistManager.getAllPlaylists());
+      setNewPlaylistName('');
+      setShowCreateModal(false);
+      Alert.alert('Success', `Created playlist "${newPlaylist.name}"`);
+    } else {
+      Alert.alert('Error', 'Please enter a playlist name');
+    }
+  };
+
+  const handleDeleteTrack = (trackId: string, playlist: Playlist) => {
+    const track = playlist.tracks.find(t => t.id === trackId);
+    if (!track) return;
+
+    Alert.alert(
+      'Remove Track',
+      `Are you sure you want to remove "${track.title}" from "${playlist.name}"?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { 
+          text: 'Remove', 
+          style: 'destructive',
+          onPress: () => {
+            const success = playlistManager.removeTrackFromPlaylist(playlist.id, trackId);
+            if (success) {
+              // Refresh the selected playlist and all playlists
+              setSelectedPlaylist(playlistManager.getPlaylistById(playlist.id));
+              setPlaylists(playlistManager.getAllPlaylists());
+              Alert.alert('Success', 'Track removed from playlist');
+            } else {
+              Alert.alert('Error', 'Failed to remove track from playlist');
+            }
+          }
+        }
+      ]
+    );
+  };
+
+  const handleDeletePlaylist = (playlist: Playlist) => {
+    Alert.alert(
+      'Delete Playlist',
+      `Are you sure you want to delete "${playlist.name}"? This action cannot be undone.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { 
+          text: 'Delete', 
+          style: 'destructive',
+          onPress: () => {
+            const success = playlistManager.deletePlaylist(playlist.id);
+            if (success) {
+              setPlaylists(playlistManager.getAllPlaylists());
+              if (selectedPlaylist && selectedPlaylist.id === playlist.id) {
+                setSelectedPlaylist(null);
+              }
+              Alert.alert('Success', 'Playlist deleted');
+            } else {
+              Alert.alert('Error', 'Failed to delete playlist');
+            }
+          }
+        }
+      ]
+    );
   };
 
   if (selectedPlaylist) {
@@ -51,6 +121,14 @@ export default function PlaylistsScreen() {
           />
           <Text style={styles.playlistTitle}>{selectedPlaylist.name}</Text>
           <Text style={styles.playlistSubtitle}>{selectedPlaylist.tracks.length} songs</Text>
+          
+          <TouchableOpacity 
+            style={styles.deletePlaylistButton}
+            onPress={() => handleDeletePlaylist(selectedPlaylist)}
+          >
+            <Ionicons name="trash-outline" size={20} color="#ff6b6b" />
+            <Text style={styles.deletePlaylistText}>Delete Playlist</Text>
+          </TouchableOpacity>
         </View>
 
         <FlatList
@@ -69,7 +147,15 @@ export default function PlaylistsScreen() {
                 <Text style={styles.trackTitle}>{item.title}</Text>
                 <Text style={styles.trackArtist}>{item.artist}</Text>
               </View>
-              <Ionicons name="play" size={24} color="#1DB954" />
+              <View style={styles.trackActions}>
+                <TouchableOpacity
+                  style={styles.deleteTrackButton}
+                  onPress={() => handleDeleteTrack(item.id, selectedPlaylist)}
+                >
+                  <Ionicons name="trash-outline" size={18} color="#ff6b6b" />
+                </TouchableOpacity>
+                <Ionicons name="play" size={24} color="#1DB954" />
+              </View>
             </TouchableOpacity>
           )}
           scrollEnabled={false}
@@ -81,31 +167,64 @@ export default function PlaylistsScreen() {
   // Show playlist selection
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
-      <Text style={styles.sectionTitle}>Your Playlists</Text>
+      <View style={styles.headerRow}>
+        <Text style={styles.sectionTitle}>Your Playlists</Text>
+        <TouchableOpacity 
+          style={styles.createButton}
+          onPress={() => setShowCreateModal(true)}
+        >
+          <Ionicons name="add" size={20} color="#1DB954" />
+        </TouchableOpacity>
+      </View>
       
-      <TouchableOpacity 
-        style={styles.playlistItem}
-        onPress={() => setSelectedPlaylist(playlists[0])}
-      >
-        <Image 
-          source={{ uri: playlists[0].coverImage }} 
-          style={styles.playlistCover}
-        />
-        <Text style={styles.playlistName}>{playlists[0].name}</Text>
-        <Text style={styles.playlistInfo}>3 songs</Text>
-      </TouchableOpacity>
+      {playlists.map((playlist) => (
+        <TouchableOpacity 
+          key={playlist.id}
+          style={styles.playlistItem}
+          onPress={() => setSelectedPlaylist(playlist)}
+        >
+          <Image 
+            source={{ uri: playlist.coverImage || sampleTracks[0].artwork }} 
+            style={styles.playlistCover}
+          />
+          <Text style={styles.playlistName}>{playlist.name}</Text>
+          <Text style={styles.playlistInfo}>{playlist.tracks.length} songs</Text>
+        </TouchableOpacity>
+      ))}
 
-      <TouchableOpacity 
-        style={styles.playlistItem}
-        onPress={() => setSelectedPlaylist(playlists[1])}
-      >
-        <Image 
-          source={{ uri: playlists[1].coverImage }} 
-          style={styles.playlistCover}
-        />
-        <Text style={styles.playlistName}>{playlists[1].name}</Text>
-        <Text style={styles.playlistInfo}>2 songs</Text>
-      </TouchableOpacity>
+      {/* Create Playlist Modal */}
+      {showCreateModal && (
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Create New Playlist</Text>
+            <TextInput
+              style={styles.textInput}
+              placeholder="Playlist name"
+              placeholderTextColor="#999"
+              value={newPlaylistName}
+              onChangeText={setNewPlaylistName}
+              autoFocus
+            />
+            <View style={styles.modalButtons}>
+              <TouchableOpacity 
+                style={[styles.modalButton, styles.cancelButton]}
+                onPress={() => {
+                  setShowCreateModal(false);
+                  setNewPlaylistName('');
+                }}
+              >
+                <Text style={styles.cancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[styles.modalButton, styles.createPlaylistButton]}
+                onPress={handleCreatePlaylist}
+              >
+                <Text style={styles.createPlaylistButtonText}>Create</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      )}
     </ScrollView>
   );
 }
@@ -119,11 +238,27 @@ const styles = StyleSheet.create({
     padding: 16,
     paddingBottom: 20,
   },
+  headerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
   sectionTitle: {
     fontSize: 20,
     fontWeight: 'bold',
     color: 'white',
-    marginBottom: 16,
+  },
+  createButton: {
+    padding: 8,
+  },
+  createPlaylistButton: {
+    backgroundColor: '#1DB954',
+  },
+  createPlaylistButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
   backButton: {
     flexDirection: 'row',
@@ -199,5 +334,82 @@ const styles = StyleSheet.create({
   trackArtist: {
     color: '#999',
     fontSize: 14,
+  },
+  trackActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginLeft: 10,
+  },
+  deleteTrackButton: {
+    padding: 5,
+  },
+  modalOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 10,
+  },
+  modalContent: {
+    backgroundColor: '#181818',
+    borderRadius: 10,
+    padding: 20,
+    width: '80%',
+    alignItems: 'center',
+  },
+  modalTitle: {
+    color: 'white',
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginBottom: 15,
+  },
+  textInput: {
+    width: '100%',
+    height: 50,
+    backgroundColor: '#333',
+    borderRadius: 8,
+    paddingHorizontal: 15,
+    color: 'white',
+    fontSize: 16,
+    marginBottom: 20,
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    width: '100%',
+  },
+  modalButton: {
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+  },
+  cancelButton: {
+    backgroundColor: '#333',
+    borderWidth: 1,
+    borderColor: '#555',
+  },
+  cancelButtonText: {
+    color: '#999',
+    fontSize: 16,
+  },
+  deletePlaylistButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 10,
+    paddingVertical: 8,
+    paddingHorizontal: 15,
+    backgroundColor: '#333',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#ff6b6b',
+  },
+  deletePlaylistText: {
+    color: '#ff6b6b',
+    fontSize: 14,
+    marginLeft: 8,
   },
 });
