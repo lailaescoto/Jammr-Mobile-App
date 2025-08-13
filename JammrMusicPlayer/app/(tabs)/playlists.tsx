@@ -1,120 +1,110 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React from 'react';
-import { FlatList, Image, ScrollView, StyleSheet, Text, TouchableOpacity } from 'react-native';
+import { FlatList, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { sampleTracks } from '../../src/data/tracks';
 import { audioPlayer } from '../../src/lib/player';
 
-interface Playlist {
-  id: string;
-  name: string;
-  coverImage?: string;
-  tracks: string[]; // track IDs
-}
-
 export default function PlaylistsScreen() {
   const router = useRouter();
-  
-  // Playlists with only existing tracks
-  const playlists: Playlist[] = [
+
+  // Define two playlists with your 5 songs
+  const playlists = [
     {
       id: '1',
-      name: 'Favorites Mix',
+      name: 'Popular Mix',
       coverImage: sampleTracks[0].artwork,
-      tracks: [sampleTracks[0].id, sampleTracks[1].id]
+      tracks: [sampleTracks[0], sampleTracks[1], sampleTracks[2]] // First 3 tracks
     },
     {
       id: '2',
       name: 'Chill Vibes',
-      coverImage: sampleTracks[2].artwork,
-      tracks: [sampleTracks[2].id, sampleTracks[3].id]
-    },
-    {
-      id: '3',
-      name: 'Workout Jams',
-      coverImage: sampleTracks[4].artwork,
-      tracks: [sampleTracks[4].id]
-    },
-    {
-      id: '4',
-      name: 'All Tracks',
-      coverImage: sampleTracks[1].artwork,
-      tracks: sampleTracks.map(t => t.id)
+      coverImage: sampleTracks[3].artwork,
+      tracks: [sampleTracks[3], sampleTracks[4]] // Last 2 tracks
     }
   ];
 
-  const recentlyAdded = sampleTracks.slice(0, 3);
+  const [selectedPlaylist, setSelectedPlaylist] = React.useState<typeof playlists[0] | null>(null);
 
-  const handlePlaylistPress = async (playlist: Playlist) => {
-    const firstTrack = sampleTracks.find(t => t.id === playlist.tracks[0]);
-    if (firstTrack) {
-      await audioPlayer.loadTrack(firstTrack);
-      await audioPlayer.play();
-      router.push('/(tabs)/now-playing');
-    }
+  const handlePlayTrack = async (track: typeof sampleTracks[0]) => {
+    await audioPlayer.loadTrack(track);
+    await audioPlayer.play();
+    router.push('/(tabs)/now-playing');
   };
 
-  const handleTrackPress = async (trackId: string) => {
-    const track = sampleTracks.find(t => t.id === trackId);
-    if (track) {
-      await audioPlayer.loadTrack(track);
-      await audioPlayer.play();
-      router.push('/(tabs)/now-playing');
-    }
-  };
+  if (selectedPlaylist) {
+    // Show tracks in selected playlist
+    return (
+      <ScrollView style={styles.container}>
+        <TouchableOpacity 
+          style={styles.backButton}
+          onPress={() => setSelectedPlaylist(null)}
+        >
+          <Ionicons name="arrow-back" size={24} color="#1DB954" />
+          <Text style={styles.backText}>Back to Playlists</Text>
+        </TouchableOpacity>
 
+        <View style={styles.playlistHeader}>
+          <Image 
+            source={{ uri: selectedPlaylist.coverImage }} 
+            style={styles.playlistCoverLarge}
+          />
+          <Text style={styles.playlistTitle}>{selectedPlaylist.name}</Text>
+          <Text style={styles.playlistSubtitle}>{selectedPlaylist.tracks.length} songs</Text>
+        </View>
+
+        <FlatList
+          data={selectedPlaylist.tracks}
+          keyExtractor={(item) => item.id}
+          renderItem={({ item }) => (
+            <TouchableOpacity
+              style={styles.trackItem}
+              onPress={() => handlePlayTrack(item)}
+            >
+              <Image 
+                source={{ uri: item.artwork }} 
+                style={styles.trackImage}
+              />
+              <View style={styles.trackInfo}>
+                <Text style={styles.trackTitle}>{item.title}</Text>
+                <Text style={styles.trackArtist}>{item.artist}</Text>
+              </View>
+              <Ionicons name="play" size={24} color="#1DB954" />
+            </TouchableOpacity>
+          )}
+          scrollEnabled={false}
+        />
+      </ScrollView>
+    );
+  }
+
+  // Show playlist selection
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
       <Text style={styles.sectionTitle}>Your Playlists</Text>
-      <FlatList
-        horizontal
-        data={playlists}
-        keyExtractor={(item) => item.id}
-        renderItem={({ item }) => (
-          <TouchableOpacity 
-            style={styles.playlistItem}
-            onPress={() => handlePlaylistPress(item)}
-          >
-            <Image 
-              source={{ uri: item.coverImage }} 
-              style={styles.playlistCover}
-            />
-            <Text style={styles.playlistName}>{item.name}</Text>
-            <Text style={styles.playlistInfo}>{item.tracks.length} song{item.tracks.length !== 1 ? 's' : ''}</Text>
-          </TouchableOpacity>
-        )}
-        contentContainerStyle={styles.playlistList}
-        showsHorizontalScrollIndicator={false}
-      />
-
-      <Text style={[styles.sectionTitle, styles.recentlyAddedTitle]}>Recently Added</Text>
-      <FlatList
-        horizontal
-        data={recentlyAdded}
-        keyExtractor={(item) => item.id}
-        renderItem={({ item }) => (
-          <TouchableOpacity 
-            style={styles.albumItem}
-            onPress={() => handleTrackPress(item.id)}
-          >
-            <Image 
-              source={{ uri: item.artwork }} 
-              style={styles.albumCover}
-            />
-            <Text style={styles.albumTitle}>{item.album}</Text>
-            <Text style={styles.artistName}>{item.artist}</Text>
-          </TouchableOpacity>
-        )}
-        contentContainerStyle={styles.albumList}
-        showsHorizontalScrollIndicator={false}
-      />
+      
+      <TouchableOpacity 
+        style={styles.playlistItem}
+        onPress={() => setSelectedPlaylist(playlists[0])}
+      >
+        <Image 
+          source={{ uri: playlists[0].coverImage }} 
+          style={styles.playlistCover}
+        />
+        <Text style={styles.playlistName}>{playlists[0].name}</Text>
+        <Text style={styles.playlistInfo}>3 songs</Text>
+      </TouchableOpacity>
 
       <TouchableOpacity 
-        style={styles.createButton}
-        onPress={() => router.push('/create-playlist')}
+        style={styles.playlistItem}
+        onPress={() => setSelectedPlaylist(playlists[1])}
       >
-        <Ionicons name="add" size={24} color="#1DB954" />
-        <Text style={styles.createButtonText}>Create New Playlist</Text>
+        <Image 
+          source={{ uri: playlists[1].coverImage }} 
+          style={styles.playlistCover}
+        />
+        <Text style={styles.playlistName}>{playlists[1].name}</Text>
+        <Text style={styles.playlistInfo}>2 songs</Text>
       </TouchableOpacity>
     </ScrollView>
   );
@@ -126,80 +116,88 @@ const styles = StyleSheet.create({
     backgroundColor: 'black',
   },
   contentContainer: {
+    padding: 16,
     paddingBottom: 20,
   },
   sectionTitle: {
     fontSize: 20,
     fontWeight: 'bold',
     color: 'white',
-    marginLeft: 16,
-    marginTop: 24,
     marginBottom: 16,
   },
-  recentlyAddedTitle: {
-    marginTop: 32,
+  backButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
   },
-  playlistList: {
-    paddingLeft: 16,
-    paddingRight: 8,
+  backText: {
+    color: '#1DB954',
+    fontSize: 16,
+    marginLeft: 8,
+  },
+  playlistHeader: {
+    alignItems: 'center',
+    padding: 20,
+  },
+  playlistCoverLarge: {
+    width: 200,
+    height: 200,
+    borderRadius: 10,
+    marginBottom: 16,
+  },
+  playlistTitle: {
+    color: 'white',
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginBottom: 4,
+  },
+  playlistSubtitle: {
+    color: '#999',
+    fontSize: 16,
   },
   playlistItem: {
-    width: 150,
-    marginRight: 16,
+    marginBottom: 20,
   },
   playlistCover: {
-    width: 150,
+    width: '100%',
     height: 150,
     borderRadius: 8,
     marginBottom: 8,
   },
   playlistName: {
     color: 'white',
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: '600',
-    marginBottom: 4,
   },
   playlistInfo: {
     color: '#999',
     fontSize: 14,
   },
-  albumList: {
-    paddingLeft: 16,
-    paddingRight: 8,
+  trackItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#333',
   },
-  albumItem: {
-    width: 150,
+  trackImage: {
+    width: 50,
+    height: 50,
+    borderRadius: 4,
     marginRight: 16,
   },
-  albumCover: {
-    width: 150,
-    height: 150,
-    borderRadius: 8,
-    marginBottom: 8,
+  trackInfo: {
+    flex: 1,
   },
-  albumTitle: {
+  trackTitle: {
     color: 'white',
     fontSize: 16,
     fontWeight: '600',
     marginBottom: 4,
   },
-  artistName: {
+  trackArtist: {
     color: '#999',
     fontSize: 14,
-  },
-  createButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#1a1a1a',
-    padding: 16,
-    margin: 16,
-    borderRadius: 8,
-    marginTop: 32,
-  },
-  createButtonText: {
-    color: '#1DB954',
-    fontSize: 16,
-    fontWeight: '600',
-    marginLeft: 12,
   },
 });
