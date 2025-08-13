@@ -19,6 +19,7 @@ export default function NowPlayingScreen() {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
+  const [favorites, setFavorites] = useState<Track[]>([]);
 
   useEffect(() => {
     const unsubscribe = audioPlayer.subscribe((state) => {
@@ -26,6 +27,7 @@ export default function NowPlayingScreen() {
       setIsPlaying(state.isPlaying);
       setCurrentTime(state.currentTime);
       setDuration(state.duration);
+      setFavorites(state.favorites || []);
     });
 
     // Load first track by default
@@ -68,6 +70,17 @@ export default function NowPlayingScreen() {
   const handlePrevious = async () => {
     await audioPlayer.playPrevious();
   };
+
+  const handleToggleFavorite = () => {
+    if (currentTrack) {
+      if (audioPlayer.isFavorite(currentTrack.id)) {
+        audioPlayer.removeFromFavorites(currentTrack.id);
+      } else {
+        audioPlayer.addToFavorites(currentTrack);
+      }
+    }
+  };
+
 
   if (!currentTrack) {
     return (
@@ -142,50 +155,63 @@ export default function NowPlayingScreen() {
           <Ionicons name="repeat" size={24} color="#999" />
         </TouchableOpacity>
         
-        <TouchableOpacity style={styles.secondaryButton}>
-          <Ionicons name="heart-outline" size={24} color="#999" />
+        <TouchableOpacity style={styles.secondaryButton} onPress={handleToggleFavorite}>
+          <Ionicons 
+            name={currentTrack && audioPlayer.isFavorite(currentTrack.id) ? "heart" : "heart-outline"} 
+            size={24} 
+            color={currentTrack && audioPlayer.isFavorite(currentTrack.id) ? "#1DB954" : "#999"} 
+          />
         </TouchableOpacity>
         
         <TouchableOpacity style={styles.secondaryButton}>
-          <Ionicons name="list" size={24} color="#999" />
+          <Ionicons name="add" size={24} color="#999" />
         </TouchableOpacity>
       </View>
 
-      {/* Track List */}
+      {/* Favorites List */}
       <View style={styles.trackListContainer}>
-        <Text style={styles.sectionTitle}>Available Tracks</Text>
-        {sampleTracks.map((track) => (
-          <TouchableOpacity
-            key={track.id}
-            style={[
-              styles.trackItem,
-              currentTrack.id === track.id && styles.activeTrackItem
-            ]}
-            onPress={() => handleTrackSelect(track)}
-          >
-            <View style={styles.trackItemInfo}>
-              <Text style={[
-                styles.trackItemTitle,
-                currentTrack.id === track.id && styles.activeTrackText
-              ]}>
-                {track.title}
+        <Text style={styles.sectionTitle}>
+          ❤️ Favorites ({favorites.length})
+        </Text>
+        {favorites.length === 0 ? (
+          <Text style={styles.emptyFavoritesText}>
+            No favorites yet. Tap the ❤️ button to add songs!
+          </Text>
+        ) : (
+          favorites.map((track) => (
+            <TouchableOpacity
+              key={track.id}
+              style={[
+                styles.trackItem,
+                currentTrack.id === track.id && styles.activeTrackItem
+              ]}
+              onPress={() => handleTrackSelect(track)}
+            >
+              <View style={styles.trackItemInfo}>
+                <Text style={[
+                  styles.trackItemTitle,
+                  currentTrack.id === track.id && styles.activeTrackText
+                ]}>
+                  {track.title}
+                </Text>
+                <Text style={[
+                  styles.trackItemArtist,
+                  currentTrack.id === track.id && styles.activeTrackText
+                ]}>
+                  {track.artist}
+                </Text>
+              </View>
+              <Text style={
+                currentTrack.id === track.id 
+                  ? styles.activeTrackDuration 
+                  : styles.trackItemDuration
+              }>
+                {formatTime(track.duration)}
               </Text>
-              <Text style={[
-                styles.trackItemArtist,
-                currentTrack.id === track.id && styles.activeTrackText
-              ]}>
-                {track.artist}
-              </Text>
-            </View>
-            <Text style={[
-              styles.trackItemDuration,
-              currentTrack.id === track.id && styles.activeTrackDuration
-            ]}>
-              {formatTime(track.duration)}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
+            </TouchableOpacity>
+          ))
+        )}
+        </View>
     </ScrollView>
   );
 }
@@ -334,6 +360,13 @@ const styles = StyleSheet.create({
   activeTrackDuration: {
     color: 'black',
     fontSize: 14,
+  },
+  emptyFavoritesText: {
+    color: '#999',
+    fontSize: 16,
+    textAlign: 'center',
+    fontStyle: 'italic',
+    marginVertical: 20,
   },
   noTrackText: {
     color: 'white',

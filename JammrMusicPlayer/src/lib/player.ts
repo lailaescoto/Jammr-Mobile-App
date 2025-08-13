@@ -11,6 +11,7 @@ class SimpleAudioPlayer {
   private positionUpdateInterval: any = null;
   private queue: Track[] = [];
   private currentIndex: number = 0;
+  private favorites: Track[] = [];
 
   constructor() {
     this.setupAudioSession();
@@ -28,7 +29,8 @@ class SimpleAudioPlayer {
         allowsRecordingIOS: false,
         staysActiveInBackground: true,
         playsInSilentModeIOS: true,
-        shouldDuckAndroid: true
+        shouldDuckAndroid: true,
+        playThroughEarpieceAndroid: false,
       });
     } catch (error) {
       console.error('Failed to setup audio session:', error);
@@ -51,6 +53,7 @@ class SimpleAudioPlayer {
       isPlaying: this.isPlaying,
       currentTime: this.currentTime,
       duration: this.duration,
+      favorites: this.favorites,
     };
     this.listeners.forEach(listener => listener(state));
   }
@@ -135,11 +138,15 @@ class SimpleAudioPlayer {
   }
 
   public async playNext() {
-    if (this.queue.length === 0) return;
-    
-    const nextIndex = (this.currentIndex + 1) % this.queue.length;
-    this.currentIndex = nextIndex;
-    const nextTrack = this.queue[nextIndex];
+    // Only traverse liked songs
+    if (this.favorites.length === 0) return;
+
+    const currentIdx = this.currentTrack
+      ? this.favorites.findIndex(t => t.id === this.currentTrack!.id)
+      : -1;
+    const nextIndex = currentIdx === -1 ? 0 : (currentIdx + 1) % this.favorites.length;
+
+    const nextTrack = this.favorites[nextIndex];
     
     await this.loadTrack(nextTrack);
     if (this.isPlaying) {
@@ -148,11 +155,15 @@ class SimpleAudioPlayer {
   }
 
   public async playPrevious() {
-    if (this.queue.length === 0) return;
-    
-    const prevIndex = this.currentIndex === 0 ? this.queue.length - 1 : this.currentIndex - 1;
-    this.currentIndex = prevIndex;
-    const prevTrack = this.queue[prevIndex];
+    // Only traverse liked songs
+    if (this.favorites.length === 0) return;
+
+    const currentIdx = this.currentTrack
+      ? this.favorites.findIndex(t => t.id === this.currentTrack!.id)
+      : -1;
+    const prevIndex = currentIdx <= 0 ? this.favorites.length - 1 : currentIdx - 1;
+
+    const prevTrack = this.favorites[prevIndex];
     
     await this.loadTrack(prevTrack);
     if (this.isPlaying) {
@@ -160,12 +171,34 @@ class SimpleAudioPlayer {
     }
   }
 
+  public addToFavorites(track: Track) {
+    if (!this.favorites.some(t => t.id === track.id)) {
+      this.favorites.push(track);
+      this.notifyListeners();
+    }
+  }
+
+  public removeFromFavorites(trackId: string) {
+    this.favorites = this.favorites.filter(t => t.id !== trackId);
+    this.notifyListeners();
+  }
+
+  public isFavorite(trackId: string): boolean {
+    return this.favorites.some(t => t.id === trackId);
+  }
+
+  public getFavorites(): Track[] {
+    return [...this.favorites];
+  }
+
+
   public getCurrentState() {
     return {
       currentTrack: this.currentTrack,
       isPlaying: this.isPlaying,
       currentTime: this.currentTime,
       duration: this.duration,
+      favorites: this.favorites
     };
   }
 
@@ -183,7 +216,7 @@ class SimpleAudioPlayer {
             this.notifyListeners();
             
             // Check if track ended
-            if (status.didJustFinish) {
+            if ((status as any).didJustFinish) {
               this.isPlaying = false;
               this.stopPositionUpdates();
               this.notifyListeners();
