@@ -11,6 +11,8 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { audioPlayer } from '../../src/lib/player';
 import { sampleTracks } from '../../src/data/tracks';
+import { Playlist } from '../../src/lib/player';
+import { Track } from '../../src/types';
 
 const { width, height } = Dimensions.get('window');
 
@@ -20,6 +22,8 @@ export default function NowPlayingScreen() {
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [favorites, setFavorites] = useState<Track[]>([]);
+  const [currentPlaylist, setCurrentPlaylist] = useState<Playlist | null>(null);
+  const [isPlayingFromPlaylist, setIsPlayingFromPlaylist] = useState(false);
 
   useEffect(() => {
     const unsubscribe = audioPlayer.subscribe((state) => {
@@ -28,6 +32,8 @@ export default function NowPlayingScreen() {
       setCurrentTime(state.currentTime);
       setDuration(state.duration);
       setFavorites(state.favorites || []);
+      setCurrentPlaylist(state.currentPlaylist || null);
+      setIsPlayingFromPlaylist(state.isPlayingFromPlaylist || false);
     });
 
     // Load first track by default
@@ -58,8 +64,12 @@ export default function NowPlayingScreen() {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const handleTrackSelect = async (track: any) => {
-    await audioPlayer.loadTrack(track);
+  const handleTrackSelect = async (track: Track) => {
+    if (isPlayingFromPlaylist && currentPlaylist) {
+      await audioPlayer.loadTrack(track, currentPlaylist);
+    } else {
+      await audioPlayer.loadTrack(track);
+    }
     await audioPlayer.play();
   };
 
@@ -78,6 +88,30 @@ export default function NowPlayingScreen() {
       } else {
         audioPlayer.addToFavorites(currentTrack);
       }
+    }
+  };
+
+  const getCurrentContextTracks = () => {
+    if (isPlayingFromPlaylist && currentPlaylist) {
+      return currentPlaylist.tracks;
+    } else {
+      return favorites;
+    }
+  };
+
+  const getCurrentContextName = () => {
+    if (isPlayingFromPlaylist && currentPlaylist) {
+      return currentPlaylist.name;
+    } else {
+      return 'Liked Songs';
+    }
+  };
+
+  const getCurrentContextCount = () => {
+    if (isPlayingFromPlaylist && currentPlaylist) {
+      return currentPlaylist.tracks.length;
+    } else {
+      return favorites.length;
     }
   };
 
@@ -168,17 +202,49 @@ export default function NowPlayingScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* Favorites List */}
+      {/* Context Track List */}
       <View style={styles.trackListContainer}>
+        {/* Context Header */}
+        <View style={styles.contextHeader}>
+          <View style={styles.contextHeaderLeft}>
+            <Ionicons 
+              name={isPlayingFromPlaylist ? "list" : "heart"} 
+              size={20} 
+              color="#1DB954" 
+            />
+            <Text style={styles.contextHeaderText}>
+              {isPlayingFromPlaylist 
+                ? `Playing from: ${currentPlaylist?.name || 'Playlist'}`
+                : 'Playing from: Liked Songs'
+              }
+            </Text>
+          </View>
+          {isPlayingFromPlaylist && currentPlaylist && (
+            <TouchableOpacity 
+              style={styles.clearContextButton}
+              onPress={() => {
+                if (currentTrack) {
+                  audioPlayer.loadTrack(currentTrack); // Clear playlist context
+                }
+              }}
+            >
+              <Ionicons name="close-circle" size={20} color="#999" />
+            </TouchableOpacity>
+          )}
+        </View>
+        
         <Text style={styles.sectionTitle}>
-          Favorites ({favorites.length})
+          {getCurrentContextName()} ({getCurrentContextCount()})
         </Text>
-        {favorites.length === 0 ? (
+        {getCurrentContextCount() === 0 ? (
           <Text style={styles.emptyFavoritesText}>
-            No favorites yet. Tap the <Ionicons name="heart-outline" size={15} color="#999" /> button to add songs!
+            {isPlayingFromPlaylist 
+              ? 'This playlist is empty.'
+              : 'No favorites yet. Tap the heart button to add songs!'
+            }
           </Text>
         ) : (
-          favorites.map((track) => (
+          getCurrentContextTracks().map((track) => (
             <TouchableOpacity
               key={track.id}
               style={[
@@ -373,5 +439,29 @@ const styles = StyleSheet.create({
     fontSize: 18,
     textAlign: 'center',
     marginTop: 100,
+  },
+  contextHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+    paddingHorizontal: 16,
+    backgroundColor: '#1a1a1a',
+    borderRadius: 8,
+    paddingVertical: 12,
+  },
+  contextHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  contextHeaderText: {
+    color: '#1DB954',
+    fontSize: 14,
+    marginLeft: 8,
+    fontWeight: '500',
+  },
+  clearContextButton: {
+    padding: 5,
   },
 });

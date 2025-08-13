@@ -3,31 +3,31 @@ import { useRouter } from 'expo-router';
 import React from 'react';
 import { FlatList, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { sampleTracks } from '../../src/data/tracks';
-import { audioPlayer } from '../../src/lib/player';
+import { audioPlayer, Playlist } from '../../src/lib/player';
 
 export default function PlaylistsScreen() {
   const router = useRouter();
 
   // Define two playlists with your 5 songs
-  const playlists = [
+  const playlists: Playlist[] = [
     {
       id: '1',
       name: 'Popular Mix',
-      coverImage: sampleTracks[0].artwork,
+      coverImage: sampleTracks[0].artwork || '../../assets/images/playlist1.jpg',
       tracks: [sampleTracks[0], sampleTracks[1], sampleTracks[2]] // First 3 tracks
     },
     {
       id: '2',
       name: 'Chill Vibes',
-      coverImage: sampleTracks[3].artwork,
+      coverImage: sampleTracks[3].artwork || '../../assets/images/playlist2.jpg',
       tracks: [sampleTracks[3], sampleTracks[4]] // Last 2 tracks
     }
   ];
 
-  const [selectedPlaylist, setSelectedPlaylist] = React.useState<typeof playlists[0] | null>(null);
+  const [selectedPlaylist, setSelectedPlaylist] = React.useState<Playlist | null>(null);
 
-  const handlePlayTrack = async (track: typeof sampleTracks[0]) => {
-    await audioPlayer.loadTrack(track);
+  const handlePlayTrack = async (track: typeof sampleTracks[0], playlist: Playlist) => {
+    await audioPlayer.loadTrack(track, playlist);
     await audioPlayer.play();
     router.push('/(tabs)/now-playing');
   };
@@ -59,7 +59,7 @@ export default function PlaylistsScreen() {
           renderItem={({ item }) => (
             <TouchableOpacity
               style={styles.trackItem}
-              onPress={() => handlePlayTrack(item)}
+              onPress={() => handlePlayTrack(item, selectedPlaylist)}
             >
               <Image 
                 source={{ uri: item.artwork }} 

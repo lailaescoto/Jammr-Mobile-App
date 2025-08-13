@@ -1,6 +1,13 @@
 import { Audio } from 'expo-av';
 import { Track } from '../types';
 
+export interface Playlist {
+  id: string;
+  name: string;
+  coverImage?: string;
+  tracks: Track[];
+}
+
 class SimpleAudioPlayer {
   private sound: Audio.Sound | null = null;
   private currentTrack: Track | null = null;
@@ -12,6 +19,8 @@ class SimpleAudioPlayer {
   private queue: Track[] = [];
   private currentIndex: number = 0;
   private favorites: Track[] = [];
+  private currentPlaylist: Playlist | null = null;
+  private isPlayingFromPlaylist: boolean = false;
 
   constructor() {
     this.setupAudioSession();
@@ -54,11 +63,13 @@ class SimpleAudioPlayer {
       currentTime: this.currentTime,
       duration: this.duration,
       favorites: this.favorites,
+      currentPlaylist: this.currentPlaylist,
+      isPlayingFromPlaylist: this.isPlayingFromPlaylist,
     };
     this.listeners.forEach(listener => listener(state));
   }
 
-  public async loadTrack(track: Track) {
+  public async loadTrack(track: Track, playlist?: Playlist) {
     try {
       if (this.sound) {
         await this.sound.unloadAsync();
@@ -71,10 +82,25 @@ class SimpleAudioPlayer {
       this.currentTime = 0;
       this.duration = track.duration;
       
-      // Update current index if track is in queue
-      const trackIndex = this.queue.findIndex(t => t.id === track.id);
-      if (trackIndex !== -1) {
-        this.currentIndex = trackIndex;
+      // Set playlist context if provided
+      if (playlist) {
+        this.currentPlaylist = playlist;
+        this.isPlayingFromPlaylist = true;
+        // Update current index within playlist
+        const trackIndex = playlist.tracks.findIndex(t => t.id === track.id);
+        if (trackIndex !== -1) {
+          this.currentIndex = trackIndex;
+        }
+      } else {
+        // If no playlist provided, check if track is in favorites
+        if (this.favorites.some(t => t.id === track.id)) {
+          this.isPlayingFromPlaylist = false;
+          this.currentPlaylist = null;
+          const trackIndex = this.favorites.findIndex(t => t.id === track.id);
+          if (trackIndex !== -1) {
+            this.currentIndex = trackIndex;
+          }
+        }
       }
       
       this.notifyListeners();
@@ -138,36 +164,50 @@ class SimpleAudioPlayer {
   }
 
   public async playNext() {
-    // Only traverse liked songs
-    if (this.favorites.length === 0) return;
-
-    const currentIdx = this.currentTrack
-      ? this.favorites.findIndex(t => t.id === this.currentTrack!.id)
-      : -1;
-    const nextIndex = currentIdx === -1 ? 0 : (currentIdx + 1) % this.favorites.length;
-
-    const nextTrack = this.favorites[nextIndex];
-    
-    await this.loadTrack(nextTrack);
-    if (this.isPlaying) {
-      await this.play();
+    if (this.isPlayingFromPlaylist && this.currentPlaylist) {
+      // Play next track from current playlist
+      const nextIndex = (this.currentIndex + 1) % this.currentPlaylist.tracks.length;
+      const nextTrack = this.currentPlaylist.tracks[nextIndex];
+      this.currentIndex = nextIndex;
+      
+      await this.loadTrack(nextTrack, this.currentPlaylist);
+      if (this.isPlaying) {
+        await this.play();
+      }
+    } else if (this.favorites.length > 0) {
+      // Play next track from favorites
+      const nextIndex = (this.currentIndex + 1) % this.favorites.length;
+      const nextTrack = this.favorites[nextIndex];
+      this.currentIndex = nextIndex;
+      
+      await this.loadTrack(nextTrack);
+      if (this.isPlaying) {
+        await this.play();
+      }
     }
   }
 
   public async playPrevious() {
-    // Only traverse liked songs
-    if (this.favorites.length === 0) return;
-
-    const currentIdx = this.currentTrack
-      ? this.favorites.findIndex(t => t.id === this.currentTrack!.id)
-      : -1;
-    const prevIndex = currentIdx <= 0 ? this.favorites.length - 1 : currentIdx - 1;
-
-    const prevTrack = this.favorites[prevIndex];
-    
-    await this.loadTrack(prevTrack);
-    if (this.isPlaying) {
-      await this.play();
+    if (this.isPlayingFromPlaylist && this.currentPlaylist) {
+      // Play previous track from current playlist
+      const prevIndex = this.currentIndex <= 0 ? this.currentPlaylist.tracks.length - 1 : this.currentIndex - 1;
+      const prevTrack = this.currentPlaylist.tracks[prevIndex];
+      this.currentIndex = prevIndex;
+      
+      await this.loadTrack(prevTrack, this.currentPlaylist);
+      if (this.isPlaying) {
+        await this.play();
+      }
+    } else if (this.favorites.length > 0) {
+      // Play previous track from favorites
+      const prevIndex = this.currentIndex <= 0 ? this.favorites.length - 1 : this.currentIndex - 1;
+      const prevTrack = this.favorites[prevIndex];
+      this.currentIndex = prevIndex;
+      
+      await this.loadTrack(prevTrack);
+      if (this.isPlaying) {
+        await this.play();
+      }
     }
   }
 
@@ -191,6 +231,29 @@ class SimpleAudioPlayer {
     return [...this.favorites];
   }
 
+  public getCurrentPlaylist(): Playlist | null {
+    return this.currentPlaylist;
+  }
+
+  public isPlayingFromPlaylistContext(): boolean {
+    return this.isPlayingFromPlaylist;
+  }
+
+  public getCurrentContextTracks(): Track[] {
+    if (this.isPlayingFromPlaylist && this.currentPlaylist) {
+      return this.currentPlaylist.tracks;
+    } else {
+      return this.favorites;
+    }
+  }
+
+  public getCurrentContextName(): string {
+    if (this.isPlayingFromPlaylist && this.currentPlaylist) {
+      return this.currentPlaylist.name;
+    } else {
+      return 'Liked Songs';
+    }
+  }
 
   public getCurrentState() {
     return {
@@ -198,7 +261,9 @@ class SimpleAudioPlayer {
       isPlaying: this.isPlaying,
       currentTime: this.currentTime,
       duration: this.duration,
-      favorites: this.favorites
+      favorites: this.favorites,
+      currentPlaylist: this.currentPlaylist,
+      isPlayingFromPlaylist: this.isPlayingFromPlaylist,
     };
   }
 
