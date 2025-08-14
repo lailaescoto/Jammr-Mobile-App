@@ -1,111 +1,163 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import React from 'react';
-import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useState } from 'react';
+import { FlatList, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { sampleTracks } from '../../src/data/tracks';
 import { audioPlayer } from '../../src/lib/player';
 
-export default function HomeScreen() {
+export default function PlaylistsScreen() {
   const router = useRouter();
-  
-  // Featured playlists
-  const featuredPlaylists = [
+  const [selectedPlaylist, setSelectedPlaylist] = useState(null);
+
+  const playlists = [
     {
       id: '1',
-      name: 'Recently Played',
+      name: 'Workout Mix',
       coverImage: sampleTracks[0].artwork,
-      tracks: [sampleTracks[0], sampleTracks[1], sampleTracks[2]]
+      tracks: [sampleTracks[0].id, sampleTracks[1].id, sampleTracks[2].id]
     },
     {
       id: '2',
-      name: 'Top Picks',
+      name: 'Chill Vibes',
       coverImage: sampleTracks[3].artwork,
-      tracks: [sampleTracks[3], sampleTracks[4]]
+      tracks: [sampleTracks[3].id, sampleTracks[4].id]
     }
   ];
 
-  // Recently added albums
-  const recentlyAdded = sampleTracks.slice(0, 3);
+  const recentlyPlayed = sampleTracks.slice(0, 2); // Last 2 played tracks
 
-  const handlePlayTrack = async (trackId: string) => {
-    const track = sampleTracks.find(t => t.id === trackId);
-    if (track) {
-      await audioPlayer.loadTrack(track);
-      await audioPlayer.play();
-      router.push('/(tabs)/now-playing');
-    }
+  const handlePlaylistPress = (playlist) => {
+    setSelectedPlaylist(playlist);
   };
+
+  const handleTrackPress = async (trackId) => {
+    const track = sampleTracks.find(t => t.id === trackId);
+    await audioPlayer.loadTrack(track);
+    await audioPlayer.play();
+    router.push('/(tabs)/now-playing');
+  };
+
+  if (selectedPlaylist) {
+    const playlistTracks = sampleTracks.filter(track => 
+      selectedPlaylist.tracks.includes(track.id)
+    );
+
+    return (
+      <ScrollView style={styles.container}>
+        <TouchableOpacity 
+          style={styles.backButton} 
+          onPress={() => setSelectedPlaylist(null)}
+        >
+          <Ionicons name="arrow-back" size={24} color="#1DB954" />
+          <Text style={styles.backText}>Back to Playlists</Text>
+        </TouchableOpacity>
+
+        <View style={styles.playlistHeader}>
+          <Image 
+            source={{ uri: selectedPlaylist.coverImage }} 
+            style={styles.playlistCoverLarge}
+          />
+          <Text style={styles.playlistTitle}>{selectedPlaylist.name}</Text>
+          <Text style={styles.playlistSubtitle}>
+            {playlistTracks.length} song{playlistTracks.length !== 1 ? 's' : ''}
+          </Text>
+        </View>
+
+        <FlatList
+          data={playlistTracks}
+          keyExtractor={(item) => item.id}
+          renderItem={({ item }) => (
+            <TouchableOpacity
+              style={styles.trackItem}
+              onPress={() => handleTrackPress(item.id)}
+            >
+              <Image 
+                source={{ uri: item.artwork }} 
+                style={styles.trackImage}
+              />
+              <View style={styles.trackInfo}>
+                <Text style={styles.trackTitle}>{item.title}</Text>
+                <Text style={styles.trackArtist}>{item.artist}</Text>
+              </View>
+              <Ionicons name="play" size={24} color="#1DB954" />
+            </TouchableOpacity>
+          )}
+          contentContainerStyle={styles.listContent}
+        />
+      </ScrollView>
+    );
+  }
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
-      {/* Welcome Header */}
-      <View style={styles.header}>
-        <Text style={styles.welcomeText}>Welcome back</Text>
-        <Text style={styles.title}>Your Library</Text>
+      {/* Welcome Section */}
+      <View style={styles.welcomeContainer}>
+        <Text style={styles.welcomeText}>Welcome back!</Text>
+        <Text style={styles.subtitle}>Ready to listen to your favorite tunes?</Text>
       </View>
 
-      {/* Featured Playlists */}
-      <Text style={styles.sectionTitle}>Featured Playlists</Text>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-        {featuredPlaylists.map((playlist) => (
+      {/* Playlists Section */}
+      <Text style={styles.sectionTitle}>Your Playlists</Text>
+      <FlatList
+        horizontal
+        data={playlists}
+        keyExtractor={(item) => item.id}
+        renderItem={({ item }) => (
           <TouchableOpacity 
-            key={playlist.id}
-            style={styles.playlistCard}
-            onPress={() => router.push({
-              pathname: '/playlist-detail',
-              params: { 
-                playlistId: playlist.id,
-                playlistName: playlist.name,
-                trackIds: JSON.stringify(playlist.tracks.map(t => t.id))
-              }
-            })}
+            style={styles.playlistItem}
+            onPress={() => handlePlaylistPress(item)}
           >
             <Image 
-              source={{ uri: playlist.coverImage }} 
-              style={styles.playlistImage}
+              source={{ uri: item.coverImage }} 
+              style={styles.playlistCover}
             />
-            <Text style={styles.playlistName}>{playlist.name}</Text>
-            <Text style={styles.playlistInfo}>{playlist.tracks.length} song{playlist.tracks.length !== 1 ? 's' : ''}</Text>
+            <Text style={styles.playlistName}>{item.name}</Text>
+            <Text style={styles.playlistInfo}>
+              {item.tracks.length} song{item.tracks.length !== 1 ? 's' : ''}
+            </Text>
           </TouchableOpacity>
-        ))}
-      </ScrollView>
+        )}
+        contentContainerStyle={styles.playlistList}
+        showsHorizontalScrollIndicator={false}
+      />
 
-      {/* Recently Added */}
-      <Text style={styles.sectionTitle}>Recently Added</Text>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-        {recentlyAdded.map((track) => (
+      {/* Recently Played Section */}
+      <Text style={styles.sectionTitle}>Recently Played</Text>
+      <FlatList
+        horizontal
+        data={recentlyPlayed}
+        keyExtractor={(item) => item.id}
+        renderItem={({ item }) => (
           <TouchableOpacity 
-            key={track.id}
-            style={styles.albumCard}
-            onPress={() => handlePlayTrack(track.id)}
+            style={styles.recentItem}
+            onPress={() => handleTrackPress(item.id)}
           >
             <Image 
-              source={{ uri: track.artwork }} 
-              style={styles.albumImage}
+              source={{ uri: item.artwork }} 
+              style={styles.recentCover}
             />
-            <Text style={styles.albumTitle}>{track.album}</Text>
-            <Text style={styles.artistName}>{track.artist}</Text>
+            <Text style={styles.recentTitle}>{item.title}</Text>
           </TouchableOpacity>
-        ))}
-      </ScrollView>
+        )}
+        contentContainerStyle={styles.recentList}
+        showsHorizontalScrollIndicator={false}
+      />
 
       {/* Quick Actions */}
-      <Text style={styles.sectionTitle}>Quick Actions</Text>
-      <View style={styles.actionsContainer}>
+      <View style={styles.quickActions}>
         <TouchableOpacity 
           style={styles.actionButton}
           onPress={() => router.push('/(tabs)/search')}
         >
-          <Ionicons name="search" size={24} color="#1DB954" />
-          <Text style={styles.actionText}>Search</Text>
+          <Ionicons name="search" size={20} color="#1DB954" />
+          <Text style={styles.actionText}>Search Songs</Text>
         </TouchableOpacity>
-        
         <TouchableOpacity 
           style={styles.actionButton}
-          onPress={() => router.push('/(tabs)/library')}
+          onPress={() => router.push('/(tabs)/now-playing')}
         >
-          <Ionicons name="musical-notes" size={24} color="#1DB954" />
-          <Text style={styles.actionText}>Your Library</Text>
+          <Ionicons name="musical-notes" size={20} color="#1DB954" />
+          <Text style={styles.actionText}>Now Playing</Text>
         </TouchableOpacity>
       </View>
     </ScrollView>
@@ -121,18 +173,49 @@ const styles = StyleSheet.create({
     padding: 16,
     paddingBottom: 32,
   },
-  header: {
+  welcomeContainer: {
     marginBottom: 24,
+    paddingHorizontal: 8,
   },
   welcomeText: {
-    color: '#999',
-    fontSize: 16,
-    marginBottom: 4,
-  },
-  title: {
     color: 'white',
     fontSize: 28,
     fontWeight: 'bold',
+    marginBottom: 4,
+  },
+  subtitle: {
+    color: '#999',
+    fontSize: 16,
+  },
+  backButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+  },
+  backText: {
+    color: '#1DB954',
+    fontSize: 16,
+    marginLeft: 8,
+  },
+  playlistHeader: {
+    alignItems: 'center',
+    padding: 20,
+  },
+  playlistCoverLarge: {
+    width: 200,
+    height: 200,
+    borderRadius: 10,
+    marginBottom: 16,
+  },
+  playlistTitle: {
+    color: 'white',
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginBottom: 4,
+  },
+  playlistSubtitle: {
+    color: '#999',
+    fontSize: 16,
   },
   sectionTitle: {
     color: 'white',
@@ -141,11 +224,14 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     marginTop: 24,
   },
-  playlistCard: {
+  playlistList: {
+    paddingLeft: 8,
+  },
+  playlistItem: {
     width: 160,
     marginRight: 16,
   },
-  playlistImage: {
+  playlistCover: {
     width: 160,
     height: 160,
     borderRadius: 8,
@@ -161,30 +247,57 @@ const styles = StyleSheet.create({
     color: '#999',
     fontSize: 14,
   },
-  albumCard: {
-    width: 140,
+  listContent: {
+    padding: 16,
+  },
+  trackItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#333',
+  },
+  trackImage: {
+    width: 50,
+    height: 50,
+    borderRadius: 4,
     marginRight: 16,
   },
-  albumImage: {
-    width: 140,
-    height: 140,
-    borderRadius: 8,
-    marginBottom: 8,
+  trackInfo: {
+    flex: 1,
   },
-  albumTitle: {
+  trackTitle: {
     color: 'white',
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: '600',
     marginBottom: 4,
   },
-  artistName: {
+  trackArtist: {
     color: '#999',
-    fontSize: 12,
+    fontSize: 14,
   },
-  actionsContainer: {
+  recentList: {
+    paddingLeft: 8,
+  },
+  recentItem: {
+    width: 120,
+    marginRight: 16,
+  },
+  recentCover: {
+    width: 120,
+    height: 120,
+    borderRadius: 8,
+    marginBottom: 8,
+  },
+  recentTitle: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  quickActions: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginTop: 16,
+    marginTop: 24,
   },
   actionButton: {
     backgroundColor: '#1a1a1a',
@@ -192,7 +305,6 @@ const styles = StyleSheet.create({
     padding: 16,
     width: '48%',
     alignItems: 'center',
-    justifyContent: 'center',
   },
   actionText: {
     color: '#1DB954',
